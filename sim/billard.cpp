@@ -89,12 +89,12 @@ class Billard : public TPlan {
     		double y,z,	// Koordinatesystem
 		       xZ,yZ,	// Queue Ziel
 		       force,	// Kraft beim Stoss mit dem Queue
-                       t1,t2,t3,
+                       t1,t2,
                        K0w,K0h;
                 int    Mode,
                        K0On,K0Move;
 
-		TVektor Z;
+		TVektor Z,K0;
 		bool moving;	// Bewegen sich Kugeln?
 
                 Kugel kugeln[N];
@@ -161,7 +161,14 @@ class Billard : public TPlan {
 
 	void DrawForce(double distance){
 		if(Mode==0) force = (distance*0.9 < 800) ?  distance*0.9 : 800;
-                if(Mode==1) force = ((800-(t2-t1))> 10)  ?  (800-(t2-t1)): 10;
+                // if(Mode==1) force = ((800-(t2-t1))> 10)  ?  (800-(t2-t1)): 10;
+                if(Mode==1){
+                   if((t2-t1) <= 790)   force = 800-(t2-t1);
+                   if((t2-t1) >= 790 && (t2-t1)<=790*2)  force = -780+(t2-t1);
+                   if((t2-t1)>=790*2 &&(t2-t1) <=790*3)  force = 2380-(t2-t1);
+                   if((t2-t1)>=790*3 && (t2-t1)<=790*4)  force = -2360+(t2-t1);
+                   if((t2-t1)>=790*4) force = 10;
+                   }
 		SetPen(Rot);
 		SetBrush(Rot);
 		Circle(-400.0,-815.0,30.0);
@@ -207,7 +214,7 @@ void Billard::Init() {
 
 void Billard::Run() {
         if(kugeln[0].pos[0]>-635.0)      K0Move = 0;
-        if(kugeln[0].pos[0]==-634.99)    K0Move = 1;
+        if(kugeln[0].pos[0]==K0[0])    K0Move = 1;
 
 	moving = CheckMoving();
 	if ( moving ) {
@@ -223,7 +230,7 @@ void Billard::Run() {
 	if(counter%2 == 0) {
 		DrawTable();	
  		DrawKugeln();	
-		if ( ! moving&&!K0Move) {DrawQueue(); }
+		if ( ! moving&&!K0Move) {DrawQueue();}
 	}
 	CallRun = True;
 	counter++;
@@ -431,7 +438,8 @@ void Billard::CheckHoles() {
                         kugeln[i].pos = TVektor(i*100.0-800.0,800.0);
                         kugeln[i].v = TVektor(0.01,0.01);
                 } }
-        if(kugeln[0].pos[1] == 800.0)    kugeln[0].pos = TVektor(-635.0,0.0);
+        if(kugeln[0].pos[1] == 800.0)    {kugeln[0].v=TVektor(0.0,0.0); kugeln[0].pos = TVektor(-635.0,0.0);  }
+        K0[0] = kugeln[0].pos[0];
 }
 
 void Billard::HandleBoxCollision() {
