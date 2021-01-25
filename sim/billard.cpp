@@ -161,7 +161,14 @@ class Billard : public TPlan {
 
 	void DrawForce(double distance){
 		if(Mode==0) force = (distance*0.9 < 800) ?  distance*0.9 : 800;
-                if(Mode==1) force = ((800-(t2-t1))> 10)  ?  (800-(t2-t1)): 10;
+               // if(Mode==1) force = ((800-(t2-t1))> 10)  ?  (800-(t2-t1)): 10;
+                if(Mode==1){
+                   if((t2-t1) <= 790)   force = 800-(t2-t1);
+                   if((t2-t1) >= 790 && (t2-t1)<=790*2)  force = -780+(t2-t1);
+                   if((t2-t1)>=790*2 &&(t2-t1) <=790*3)  force = 2380-(t2-t1);
+                   if((t2-t1)>=790*3 && (t2-t1)<=790*4)  force = -2360+(t2-t1);
+                   if((t2-t1)>=790*4) force = 10;
+                   }
 		SetPen(Rot);
 		SetBrush(Rot);
 		Circle(-400.0,-815.0,30.0);
