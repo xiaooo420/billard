@@ -21,6 +21,7 @@ static double bande = 0.8; 	// D?mpfung durch die Bande
 static double r = 30.0;  	// Kugelradius
 static double ForceScale = 0.06;// Skalierungskonstante f¨¹r die Kraft bei Stoss mit dem Queue
 static bool Foul = true;        // ob es ein Foul eintritt
+static bool FoulK0 = true;
 static bool Treffe = false;     // ob der weisse Kugel anderen Kugeln trifft
 static bool insloch = false;      //gibt es ein Kugel, der in dieser Runde in das Loch gegangen ist
 static bool Spieler1 = true;     // ob der Spieler 1 jetzt spielen
@@ -142,6 +143,7 @@ class Billard : public TPlan {
 
 	void BildMouseDown(int x, int y){
                 Foul = false;
+                FoulK0 = false;
                 Treffe = false;
                 erststoss = false;
                 insloch = false;
@@ -159,7 +161,7 @@ class Billard : public TPlan {
 		        Z[1] = IntToY(y);
 	    	        //xZ = IntToX(x);
 	    	        //yZ = IntToY(y);
-                if(Foul && ! moving){
+                if(FoulK0 && ! moving){
                         kugeln[0].pos[0]=IntToX(x);
                         kugeln[0].pos[1]=IntToY(y);
                         if(kugeln[0].pos[0]-r<-1230.0) kugeln[0].pos[0]=-1230.0+r;
@@ -240,7 +242,9 @@ void Billard::Init() {
 
 void Billard::Run() {
         if(kugeln[0].pos[0]>-635.0)      K0Move = 0;
-        if(kugeln[0].pos[0]==K0[0])    K0Move = 1;
+        //if(kugeln[0].pos[0]==K0[0])      K0Move = 1;
+        if(FoulK0)      K0Move = 1;
+        printf("K0Move: %d, kugeln[0].pos[0]: %8.31e\n", K0Move, kugeln[0].pos[0]);
 
 	moving = CheckMoving();
 	if ( moving ) {
@@ -514,7 +518,10 @@ void Billard::CheckHoles() {
                dist(kugeln[i].pos[0], kugeln[i].pos[1], 1210.0, 575.0) < 60.0||
                dist(kugeln[i].pos[0], kugeln[i].pos[1], 0.0, -600.0) < 60.0||
                dist(kugeln[i].pos[0], kugeln[i].pos[1], 0.0, 600.0) < 60.0){
-                        kugeln[i].pos = TVektor(i*100.0-800.0,800.0);
+               if(Ordnung == 1)    kugeln[i].pos = TVektor(i*100.0-800.0,800.0);
+               if(Ordnung == 2){   if(i<8)  kugeln[i].pos = TVektor(i*100.0,800.0);
+                                   if(i==8) kugeln[i].pos = TVektor(i*100.0-800.0,800.0);
+                                   if(i>8)  kugeln[i].pos = TVektor((i-8)*100.0-800.0,800.0);}
                         kugeln[i].v = TVektor(0.01,0.01);
                         kugeln[i].inGame = false;
                         insloch = true;
@@ -536,7 +543,7 @@ void Billard::CheckHoles() {
 void Billard::CheckFouls(){
         bool gameover=false;
         if(! kugeln[0].inGame) {
-               Foul = true;
+               FoulK0 = true;
                kugeln[0].inGame = true;}
          for(int i = 1; i < N; i++) {
                        if(kugeln[i].insloch2){
