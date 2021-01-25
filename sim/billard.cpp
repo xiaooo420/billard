@@ -17,9 +17,18 @@ static double Stockradius = 30.0;
 static double Stockanfangsort = -800.0;
 
 static double my = 0.01; 	// Rollreibung
-static double bande = 0.8; 	// Dämpfung durch die Bande
+static double bande = 0.8; 	// D?mpfung durch die Bande
 static double r = 30.0;  	// Kugelradius
-static double ForceScale = 0.06;// Skalierungskonstante für die Kraft bei Stoss mit dem Queue
+static double ForceScale = 0.06;// Skalierungskonstante f¨¹r die Kraft bei Stoss mit dem Queue
+static bool Foul = true;        // ob es ein Foul eintritt
+static bool Treffe = false;     // ob der weisse Kugel anderen Kugeln trifft
+static bool insloch = false;      //gibt es ein Kugel, der in dieser Runde in das Loch gegangen ist
+static bool Spieler1 = true;     // ob der Spieler 1 jetzt spielen
+static bool Spieler2 = false;    // ob der Spieler 2 jetzt spielen
+static bool Reihe = false;       // ob es in Game ist
+static bool erststoss = false;    //ob der wesse Kugel anderen schon ein mal gestosst
+static int Ordnung = 0;          //Die Ornung von Kugeln fuer beide Spielern
+static bool Gameon = false;     // this Game is not on
 int counter = 0;
 
 real dist(real x1, real y1, real x2, real y2) {
@@ -57,10 +66,11 @@ class Kugel {
                 int n; 		// Nummer der Kugel 	
 		real r; 	// Radius
 		TVektor pos;	// Position pos[0] = x, pos[1] = y
-		TVektor next;	// Posistion in der Nächsten Iteration
+		TVektor next;	// Posistion in der N?chsten Iteration
 		TVektor v;	// Geschwindigkeit
 		double m;	// Masse
-		bool inGame;	// Ist Kugel im Spiel 	
+		bool inGame;	// Ist Kugel im Spiel
+                bool insloch2;   //ob dieser Kugel in dieser Runde ins Loch geht
 		TColor color;
 
 		void init_Kugel(int n, real x, real y, TColor color) {
@@ -72,6 +82,7 @@ class Kugel {
 			this->m = 50;
 			this->inGame = true;
 			this->color = color;
+                        this->insloch2=false;
 		}
 
 		void move() {
@@ -115,9 +126,13 @@ class Billard : public TPlan {
 	void HandleBoxCollision();
 	void HandleBallCollision();
 	void CheckHoles();
+        void CheckFouls();
 	void BallCCD(int);
 	void DrawKugeln();
 	void DrawTable();
+        void DrawInfo();
+        void DrawFoul();
+        void Drawgameover();
 	void Debug() {
 	}
 
@@ -126,7 +141,11 @@ class Billard : public TPlan {
 	}
 
 	void BildMouseDown(int x, int y){
-		if ( ! moving ) Stoss();
+                Foul = false;
+                Treffe = false;
+                erststoss = false;
+                insloch = false;
+		if ( ! moving && ! Foul) Stoss();
 
                 if ( dist(kugeln[0].pos[0], kugeln[0].pos[1], IntToX(x), IntToY(y))<r){
                         K0On = 1;
@@ -136,11 +155,18 @@ class Billard : public TPlan {
 	}
 
 	void BildMouseMove(int x, int y, int left){
-		Z[0] = IntToX(x);
-		Z[1] = IntToY(y);
-	    	//xZ = IntToX(x);
-	    	//yZ = IntToY(y);
-                
+                        Z[0] = IntToX(x);
+		        Z[1] = IntToY(y);
+	    	        //xZ = IntToX(x);
+	    	        //yZ = IntToY(y);
+                if(Foul && ! moving){
+                        kugeln[0].pos[0]=IntToX(x);
+                        kugeln[0].pos[1]=IntToY(y);
+                        if(kugeln[0].pos[0]-r<-1230.0) kugeln[0].pos[0]=-1230.0+r;
+                        if(kugeln[0].pos[0]>-635.0) kugeln[0].pos[0]=-635.0;
+                        if(kugeln[0].pos[1]-r<-600.0) kugeln[0].pos[1]=-600.0+r;
+                        if(kugeln[0].pos[1]+r>600.0) kugeln[0].pos[1]=600.0-r;}
+                        //am Anfang oder nach einem Foul wird die Position des weissen Kugel vom Maus bestimmt
                 if(left && K0On && K0Move){
                         kugeln[0].pos[0]=IntToX(x)-K0w;
                         kugeln[0].pos[1]=IntToY(y)-K0h;
@@ -153,7 +179,7 @@ class Billard : public TPlan {
 
         void BildMouseUp(int x, int y){
             if ( dist(kugeln[0].pos[0], kugeln[0].pos[1], IntToX(x), IntToY(y))<r) K0Move=0;}
-	
+
 	void InitQueue(){
 	    SetPen(Hellrot,5);
 	    SetBrush(Hellrot);
@@ -180,7 +206,7 @@ class Billard : public TPlan {
 	    SetPen(Hellrot,5);
 	    SetBrush(Hellrot);
 	    //Circle(xK,yK,Stockradius);
-	
+
 	    SetPen(Schwarz,3);
 	    MoveTo(kugeln[0].pos[0],kugeln[0].pos[1]);
 	    LineTo(Z[0],Z[1]);
@@ -218,6 +244,8 @@ void Billard::Run() {
 
 	moving = CheckMoving();
 	if ( moving ) {
+                Gameon = true;
+                Reihe = true; //das bedeutet, diese Runde laeuft
                 t1=t2;
 		HandleBoxCollision();
 		HandleBallCollision();
@@ -227,11 +255,22 @@ void Billard::Run() {
 			kugeln[i].move();
 		}
 	}
+  if(! moving && Reihe){
+    if(! Treffe) Foul = true;
+      CheckFouls();
+        if(Foul || ! insloch){
+          Spieler1 = ! Spieler1;
+          Spieler2 = ! Spieler2;
+        }
+        Reihe = false;
+  } // wenn keiner Kugeln ins Loch geht, oder wenn es ein Foul eintritt, wird der Spieler gewechselt
 	if(counter%2 == 0) {
-		DrawTable();	
- 		DrawKugeln();	
-		if ( ! moving&&!K0Move) {DrawQueue();}
+		DrawTable();
+ 		DrawKugeln();
+    DrawInfo();
+		if ( ! moving&&!K0Move) DrawQueue();
 	}
+  DrawFoul();
 	CallRun = True;
 	counter++;
         t2=counter;
@@ -244,6 +283,7 @@ void Billard::Reset(){
         Clear(Schwarz);
 	DrawTable();
 	InitQueue();
+        DrawInfo();
 
         for(int i = 0; i < N; i++) {
 		kugeln[i].init_Kugel(i, kugeln_X[i], kugeln_Y[i], colors[i]);
@@ -253,6 +293,14 @@ void Billard::Reset(){
         Mode = 0;
         K0On = 0;
         K0Move = 1;
+        Foul = true;
+        Spieler1 = true;
+        Spieler2 = false;
+        Treffe = false;
+        Ordnung = 0;
+        erststoss = false;
+        insloch = false;
+        Gameon = false;
 }
 
 void Billard::RunTaste0(){ Mode = 0;}
@@ -268,7 +316,7 @@ void Billard::DrawTable(){
 	Rectangle(-1405.0,-865.0,2810.0,100.0);
 
         Rectangle(-1405.0,765.0,2810.0,100.0);
-        
+
 	SetPen(Schwarz,2);
 	SetBrush(Gruen);
 
@@ -282,19 +330,19 @@ void Billard::DrawTable(){
 	Circle(400.0,-815.0,30.0);
 	SetPen(Schwarz,1);
 	SetBrush(Schwarz);
-      /*	Circle(-1270.0,-635.0,50.0);  // Löcher
+      /*	Circle(-1270.0,-635.0,50.0);  // L?cher
 	Circle(-1270.0,635.0,50.0);
 	Circle(1270.0,-635.0,50.0);
 	Circle(1270.0,635.0,50.0);
 	Circle(0.0,-635.0,50.0);
-	Circle(0.0,635.0,50.0); // Löcher Ende  */
+	Circle(0.0,635.0,50.0); // L?cher Ende  */
 
-        Circle(-1210.0,-575.0,60.0);// Löcher
+        Circle(-1210.0,-575.0,60.0);// L?cher
         Circle(-1210.0,575.0,60.0);
         Circle(1210.0,-575.0,60.0);
         Circle(1210.0,575.0,60.0);
         Circle(0.0,-600.0,60.0);
-        Circle(0.0,600.0,60.0);// Löcher Ende  */
+        Circle(0.0,600.0,60.0);// L?cher Ende  */
 
 	SetPen(Schwarz,2);
 	MoveTo(-1220.0,-635.0); // Bande
@@ -367,7 +415,37 @@ void Billard::DrawTable(){
 	Circle(1320.0,350.0,10.0);
 	Circle(1320.0,-350.0,10.0);
 }
+void Billard::DrawInfo(){
+        SetPen(Schwarz,3);
+        SetTextSize(20);
+        Text(-700.0,925.0,"Spieler1 : Jack");
+        Text(350.0,925.0,"Spieler2 : Tom");
+        SetPen(Schwarz);
+        SetBrush(Gelb);
+        if(Spieler1) Circle(-450.0,905.0,20.0);
+        if(Spieler2) Circle(600.0,905.0,20.0);
+        // gleber Kugel bedeutet, welcher Spieler jetzt in der Runde ist
+        if(Ordnung == 1) {
+               Text(-700.0,980.0,"Vollfarbe Kugeln 1-7");
+               Text(350.0,980.0,"Halbfarbe Kugeln 9-15");}
+        if(Ordnung == 2) {
+               Text(-700.0,980.0,"Halbfarbe Kugeln 9-15");
+               Text(350.0,980.0,"Vollfarbe Kugeln 1-7");}
+}
+void Billard::Drawgameover(){
+     SetPen(Schwarz,3);
+        SetTextSize(100);
+        Text(-700.0,0.0,"Gameover bitte Reset");
+}
 
+void Billard::DrawFoul(){
+     if(Gameon && Foul ){
+     SetPen(Schwarz,3);
+     SetTextSize(15);
+     Text(-900.0,0.0,"Du hast ein Foul!");
+     }
+     // wenn ein Foul eintritt, dann tauscht ein Satz auf
+}
 void Billard::DrawKugeln() {
 	double x, y;
 	int n;
@@ -393,6 +471,7 @@ void Billard::DrawKugeln() {
 			View(x-r, y-r*0.7, 2*r, 1.4*r);
 			Scale(x-r, x+r, y - r*0.7, y+0.7*r);
 			Circle(x,y,r);
+                        SetTextSize(15);
 			Text(x-0.5*r,y+0.5*r,label);
 
 			View();
@@ -437,14 +516,61 @@ void Billard::CheckHoles() {
                dist(kugeln[i].pos[0], kugeln[i].pos[1], 0.0, 600.0) < 60.0){
                         kugeln[i].pos = TVektor(i*100.0-800.0,800.0);
                         kugeln[i].v = TVektor(0.01,0.01);
+                        kugeln[i].inGame = false;
+                        insloch = true;
+                        kugeln[i].insloch2 = true;
+                        if(i<8 && i>0 && Spieler1){
+                        if(! kugeln[i].inGame && ! Ordnung) Ordnung=1;}
+                        if(i>8 && i<16 && Spieler1){
+                        if(! kugeln[i].inGame && ! Ordnung) Ordnung=2;}
+                        if(i<8 && Spieler2){
+                        if(! kugeln[i].inGame && ! Ordnung) Ordnung=2;}
+                        if(i>8 && i<16 && Spieler2){
+                        if(! kugeln[i].inGame && ! Ordnung) Ordnung=1;}
+                        //die Ordnung wird von dem erstem Ging ins Loch bestimmt
                 } }
         if(kugeln[0].pos[1] == 800.0)    {kugeln[0].v=TVektor(0.0,0.0); kugeln[0].pos = TVektor(-635.0,0.0);  }
         K0[0] = kugeln[0].pos[0];
+
+}
+void Billard::CheckFouls(){
+        bool gameover=false;
+        if(! kugeln[0].inGame) {
+               Foul = true;
+               kugeln[0].inGame = true;}
+         for(int i = 1; i < N; i++) {
+                       if(kugeln[i].insloch2){
+                                if(Ordnung == 1 && Spieler1 && i<8) kugeln[i].insloch2 = false;
+                                if(Ordnung == 1 && Spieler1 && i>8 && i<16){
+                                Foul = true;
+                                kugeln[i].insloch2 = false;}
+                                if(Ordnung == 1 && Spieler2 && i>8 && i<16) kugeln[i].insloch2 = false;
+                                if(Ordnung == 1 && Spieler2 && i<8){
+                                Foul = true;
+                                kugeln[i].insloch2 = false;}
+                                if(Ordnung == 2 && Spieler2 && i<8) kugeln[i].insloch2 = false;
+                                if(Ordnung == 2 && Spieler2 && i>8 && i<16){
+                                Foul = true;
+                                kugeln[i].insloch2 = false;}
+                                if(Ordnung == 2 && Spieler1 && i>8 && i<16) kugeln[i].insloch2 = false;
+                                if(Ordnung == 2 && Spieler1 && i<8){
+                                Foul = true;
+                                kugeln[i].insloch2 = false;}
+                                if(i == 8){
+                                    for(int j = 1; j < N; j++){
+                                         if(kugeln[j].inGame) gameover=true;
+                                         //wenn man falschen Kugel ins Loch gestosst, tritt ein Foul ein
+                                    }
+                                }
+                       }
+         }
+         if(gameover) Drawgameover();
 }
 
+
 void Billard::HandleBoxCollision() {
-	double tcx;	// Zeitanteil in dem die Kollision stattfinden würde in x
-	double tcy;	// Zeitanteil in dem die Kollision stattfinden würde in y
+	double tcx;	// Zeitanteil in dem die Kollision stattfinden w¨¹rde in x
+	double tcy;	// Zeitanteil in dem die Kollision stattfinden w¨¹rde in y
 	for(int i = 0; i < N; i++) {
 		kugeln[i].next = kugeln[i].pos + kugeln[i].v * (1 - my);
 
@@ -494,6 +620,26 @@ void Billard::HandleBallCollision() {
 			dist = distKugeln(kugeln[i],kugeln[j]);
 			if(2*r >= dist) {
 				vn = (kugeln[j].pos - kugeln[i].pos)/norm(kugeln[j].pos - kugeln[i].pos);
+                                Treffe = true;
+                                if(i == 0 && ! erststoss){
+                                        if(Ordnung == 1 && Spieler1 && j<8) erststoss = true;
+                                        if(Ordnung == 1 && Spieler1 && j>8 && j<16){
+                                                 Foul = true;
+                                                 erststoss = true;}
+                                        if(Ordnung == 1 && Spieler2 && j>8 && j<16) erststoss = true;
+                                        if(Ordnung == 1 && Spieler2 && j<8){
+                                                 Foul = true;
+                                                 erststoss = true;}
+                                        if(Ordnung == 2 && Spieler2 && j<8) erststoss = true;
+                                        if(Ordnung == 2 && Spieler2 && j>8 && j<16){
+                                                 Foul = true;
+                                                 erststoss = true;}
+                                        if(Ordnung == 2 && Spieler1 && j>8 && j<16) erststoss = true;
+                                        if(Ordnung == 2 && Spieler1 && j<8){
+                                                 Foul = true;
+                                                 erststoss = true;}}
+                                                 // wenn man in jeder Runde beim erstem Stoss falsen Kugel gestosst, tritt ein Foul ein
+
 				if(2*r > dist) {
 					kugeln[i].pos -= (2*r - dist) * vn;
 					kugeln[j].pos += (2*r - dist) * vn;
