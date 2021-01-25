@@ -1,7 +1,18 @@
 ---
-documentclass: article
+documentclass: scrreprt
 classoption:
  - twocolumn
+ - 12pt
+ - a4paper
+ - german
+ - BCOR10mm
+ - DIV14
+ - parskip=half
+ - oneside
+ - openany,
+ - numbers=noenddot
+ - bibligraphy=totoc
+ - index=totoc
 author:
  - Xiao Wang
  - Liucheng Kang
@@ -9,22 +20,48 @@ author:
  - Jonas Walkling
 lang: de
 title: Simulation eines Billardspiels
-titlepage: true
 bibliography: ref.bib
 link-citations: true
 tables-no-page-break: true
 header-includes:
+  - \def \AUTHOR     {Xiao Wang, Liucheng Kang, Bin Zouh, Jonas Walkling} 
+  - \def \TITLE      {Simulation eines Billiardspiels}
+  - \def \TYPE       {Diplomarbeit/Studienarbeit/Masterarbeit/Bachelorarbeit/Projektarbeit}
+  - \def \MATRIKELNR {1234567}
+  - \def \BETREUER   {Ms. S. Vor- und Zuname}
+  - \usepackage{scrlayer-scrpage}
+  - \setheadsepline[\textwidth+20pt]{0.5pt}
   - \usepackage[T1]{fontenc}
   - \usepackage{tikz}
   - \usetikzlibrary{calc}
   - \usetikzlibrary{arrows,decorations.markings}
   - \usepackage{svg}
+  - \usepackage[]{hyperref}
+  - \hypersetup{pdftitle={\TITLE}}
+  - \hypersetup{pdfauthor={\AUTHOR}}
+  - \hypersetup{pdfcreator={pdfLatex}}
+  - \hypersetup{pdfsubject={\TYPE\ am Institut für Dynamik und Schwingungen der Technischen Universität Braunschweig}}
+  - \hypersetup{pdfkeywords={\TYPE, Technische Universität Braunschweig, TU-BS, Institut für Dynamik und Schwingungen, IDS, \TITLE, \AUTHOR, \MATRIKELNR, \BETREUER}}
+  - \hypersetup{colorlinks={true}}
+  - \hypersetup{linkcolor={black}}
+  - \hypersetup{citecolor={black}}
+  - \hypersetup{filecolor={black}}
+  - \hypersetup{urlcolor={black}}
+  - \hypersetup{pdflang={de}}
+  - \hypersetup{hyperindex=true}
   - \usepackage{booktabs}
   - \usepackage{makecell}
   - \usepackage{wrapfig}
   - \usepackage{float}
   - \setcounter{secnumdepth}{3}
   - \setcounter{tocdepth}{4}
+  - \usepackage[ngerman]{datenumber}
+  - \pagestyle{scrheadings}
+  - \setheadsepline{.4pt}
+  - \usepackage{bm} 
+  - \usepackage{units}
+  - \usepackage[final]{pdfpages}
+  - \usepackage{graphicx}
 ---
 
 # Einführung
@@ -106,16 +143,21 @@ Da die Ausgabe als 2D Grafik erfolgt, ist es naheliegend auch ein 2-Dimensionale
 [ very thick,
   > = latex
 ]
+
   \coordinate (a) at (1,1);
   \coordinate (v1) at (2.6,3);
   \coordinate (b) at (4,1.8);
   \draw[thick,<->] (0,3) node[above left] {$y$} |- (6,0) node[below] {$x$};
+
   \draw (a) circle (0.9);
   \draw (b) circle (0.9);
   \draw (a) node[below] {$x_1,y_1$} ;
   \draw (b) node[above] {$x_2,y_2$} ;
   \draw  (a) node[] {\Large +};
   \draw  (b) node[] {\Large +};
+
+   \draw[thick, ->] (b) to node[right, midway] {$r$} (4.35,1);
+
   \draw[dashed, ->,thick] (a) to (2.6,3) node[below=1mm] {$v_1$};
   \draw[dashed, ->,thick] (b) to (2.3,0.3) node[right=1mm] {$v_2$};
   \draw[thick,dotted,->] (a) to node[left,near end] {$v_{1x}$} (1,3);
@@ -129,12 +171,30 @@ $$ \vec{p}_{t} = \vec{p}_{t-1} + \vec{v}_{t} $$
 Hier wird dann noch in jedem Iterationsschritt die Geschwindigkeit um den durch die Rollreibung vorgegebenen Faktor verringert. $\vec{v}_t = \vec{v}_{t-1} \cdot (1 - \mu_R) \;$.
 
 ### Kollision mit der Bande
-Das  
 
+Das nächste physikalische Problem ist die Kollision von Kugeln und Bande. Hier handelt es sich wie eingangs erwähnt um einen einen elastischen Stoss. Da die Bande unbeweglich und gerade ist gilt, dass sich nur der Anteil der Kraft im Vorzeichen ändert, welcher Senkrecht zur Wand steht.
 
+\begin{figure}
+\centering
+\begin{tikzpicture}
+  [
+    thick,
+    > = latex
+  ]
 
+  \coordinate (b) at (2,1.4);
+  \draw[line width=1mm]  (0,-2) to (0,2);
 
-:
+  \draw[very thick] (b) circle (0.5);
+  \draw[->] (b) to (0,0) to node[sloped,above] {mit Bande} (2,-1.4);
+  \draw[dashed, ->] (b) to (0,0) to node[sloped,above] {ohne Bande} (-2,-1.4);
+  \draw[thin] (216:0.9) arc (216:324:0.9);
+  \draw (243:0.7) node {$\varphi$};
+  \draw (293:0.7) node {$\varphi$};
+
+\end{tikzpicture}
+\caption{Kollision mit der Bande}
+\end{figure}
 
 # Erklärung der Graphischen Oberfläche
 
