@@ -33,8 +33,8 @@ static bool Treffe = false;     // ob der weisse Kugel anderen Kugeln trifft
 static bool insloch = false;      //gibt es ein Kugel, der in dieser Runde in das Loch gegangen ist
 static bool Spieler1 = true;     // ob der Spieler 1 jetzt spielen
 static bool Spieler2 = false;    // ob der Spieler 2 jetzt spielen
-static bool Spieler11 = true;     // ob der Spieler 1 jetzt spielen
-static bool Spieler22 = false;    // ob der Spieler 2 jetzt spielen
+//static bool Spieler11 = true;     // ob der Spieler 1 jetzt spielen
+//static bool Spieler22 = false;    // ob der Spieler 2 jetzt spielen
 static bool Reihe = false;       // ob es in Game ist
 static bool erststoss = false;    //ob der wesse Kugel anderen schon ein mal gestosst
 static int Ordnung = 0;          //Die Ornung von Kugeln fuer beide Spielern
@@ -187,7 +187,8 @@ class Billard : public TPlan {
                         if(kugeln[0].pos[0]>-635.0) kugeln[0].pos[0]=-635.0;
                         if(kugeln[0].pos[1]-r<-600.0) kugeln[0].pos[1]=-600.0+r;
                         if(kugeln[0].pos[1]+r>600.0) kugeln[0].pos[1]=600.0-r;
-                        K0Move = 1;}
+                        K0Move = 1;
+                        }
                         //am Anfang oder nach einem Foul wird die Position des weissen Kugel vom Maus bestimmt
                 /* if(left && K0On && K0Move){
                         kugeln[0].pos[0]=IntToX(x)-K0w;
@@ -201,7 +202,9 @@ class Billard : public TPlan {
 	}
 
         void BildMouseUp(int x, int y){
-            if ( dist(kugeln[0].pos[0], kugeln[0].pos[1], IntToX(x), IntToY(y))<r) K0Move=0;}
+            //if ( dist(kugeln[0].pos[0], kugeln[0].pos[1], IntToX(x), IntToY(y))<r) K0Move=0;
+            if ( dist(0.0, 0.0, IntToX(x), IntToY(y))<1230.0) K0Move=0;
+            }
 
 	void InitQueue(){
 	    SetPen(Hellrot,5);
@@ -249,14 +252,12 @@ class Billard : public TPlan {
 void Billard::Init() {
 	ProgrammName = "Billard";
 
-	CallRunTime = 10;
+	CallRunTime = 3;
 	moving = false;
 
 	Scale(-1700.0,1700.0,0.0);
 	y = IntToY(0);
 	Scale(-1700.0,1700.0,-y/2.0);
-
-	Z = TVektor(0.0,0.0);
 
         InsertTaste(0,"Distanzenkraft");
         InsertTaste(1,"Zeitenkraft");
@@ -320,6 +321,7 @@ void Billard::Reset(){
 	}
 	DrawKugeln();
 
+        Z = TVektor(0.0,0.0);
         Mode = 0;
         K0On = 0;
         K0Move = 1;
@@ -495,8 +497,8 @@ void Billard::DrawInfo(){
         SetBrush(Schwarz);
         Rectangle(-300.0,880.0,600.0,50.0);
         SetBrush(Gelb);
-        if(Spieler1) {Circle(-280.0,905.0,20.0); Spieler11=Spieler1;}
-        if(Spieler2) {Circle(280.0,905.0,20.0);  Spieler22=Spieler2;}
+        if(Spieler1) {Circle(-280.0,905.0,20.0); }//Spieler11=Spieler1;}
+        if(Spieler2) {Circle(280.0,905.0,20.0);  }//Spieler22=Spieler2;}
         // gleber Kugel bedeutet, welcher Spieler jetzt in der Runde ist
         if(Ordnung == 1) {
                Text(-520.0,980.0,"Vollfarbe Kugeln 1-7");
